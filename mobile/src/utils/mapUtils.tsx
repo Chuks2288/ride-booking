@@ -287,6 +287,7 @@ export const vehicleIcons: Record<
 import axios from "axios";
 import { useUserStore } from "@/store/userStore";
 import Constants from "expo-constants";
+import haversine from "haversine-distance";
 
 const appName = Constants.manifest?.name || "rideapp";
 const userAgent = `${appName}/1.0 (chuksdumbiri87@gmail.com)`;
@@ -355,36 +356,88 @@ export const reverseGeocode = async (latitude: number, longitude: number) => {
   }
 };
 
+// function extractPlaceData(data: any) {
+//   return data.map((item: any) => {
+//     const props = item.properties;
+//     const descriptionParts = [
+//       props.street,
+//       props.city,
+//       props.state,
+//       props.country,
+//     ].filter(Boolean);
+
+//     return {
+//       place_id: props.osm_id.toString(),
+//       title: props.name || props.street || "Unknown",
+//       description: descriptionParts.join(", "),
+//       geometry: item.geometry,
+//     };
+//   });
+// }
 function extractPlaceData(data: any) {
-  return data.map((item: any) => ({
-    place_id: item.properties.osm_id.toString(),
-    title: item.properties.name || item.properties.street || "Unknown",
-    description:
-      item.properties.city ||
-      item.properties.state ||
-      item.properties.country ||
-      "",
-  }));
+  return data.map((item: any) => {
+    const props = item.properties;
+
+    const descriptionParts = [
+      props.housenumber,
+      props.street,
+      props.suburb,
+      props.city,
+      props.state,
+      props.postcode,
+      props.country,
+    ].filter(Boolean); // Remove any undefined or null values
+
+    return {
+      place_id: props.osm_id.toString(),
+      title: props.name || props.street || "Unnamed Place",
+      description: descriptionParts.join(", "),
+      geometry: item.geometry,
+    };
+  });
 }
 
 export const getPlacesSuggestions = async (query: string) => {
   const { location } = useUserStore.getState();
+
+  if (!location || !location.latitude || !location.longitude) {
+    console.warn("User location is missing");
+    return [];
+  }
+
   try {
     const response = await axios.get("https://photon.komoot.io/api/", {
       params: {
         q: query,
-        limit: 5,
-        lang: "en",
+        limit: 10,
         lat: location?.latitude,
         lon: location?.longitude,
+        lang: "en",
       },
       headers: {
-        "User-Agent": userAgent,
+        "User-Agent": "rideapp/1.0 (chuksdumbiri87@gmail.com)",
       },
     });
 
-    return extractPlaceData(response.data.features);
+    const filtered = response.data.features.filter((item: any) => {
+      const coords = item.geometry.coordinates; // [lon, lat]
+      const placeLat = coords[1];
+      const placeLon = coords[0];
+
+      const distanceInMeters = haversine(
+        { latitude: location.latitude, longitude: location.longitude },
+        { latitude: placeLat, longitude: placeLon }
+      );
+
+      // 50 km radius
+      return (
+        item.properties?.country === "Nigeria" && distanceInMeters <= 50000
+      );
+    });
+
+    return extractPlaceData(filtered);
   } catch (error) {
+    console.error("Error fetching suggestions:", error);
     return [];
   }
 };
