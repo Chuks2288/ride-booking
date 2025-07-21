@@ -178,6 +178,15 @@ type Coordinates = {
   address: string;
 };
 
+type Place = {
+  place_id: string;
+  osm_id: number;
+  osm_type: string;
+  title: string;
+  description: string;
+  geometry: any;
+};
+
 const LocationSelection = () => {
   const { location, setLocation } = useUserStore();
   const isFocused = useIsFocused();
@@ -186,7 +195,8 @@ const LocationSelection = () => {
   const [drop, setDrop] = useState("");
   const [pickupCoords, setPickupCoords] = useState<any>(null);
   const [dropCoords, setDropCoords] = useState<any>(null);
-  const [locations, setLocations] = useState<any[]>([]);
+  // const [locations, setLocations] = useState<any[]>([]);
+  const [locations, setLocations] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<"pickup" | "drop">("drop");
   const [modalTitle, setModalTitle] = useState("drop");
@@ -201,8 +211,29 @@ const LocationSelection = () => {
     setLoading(false);
   };
 
-  const addLocation = async (id: string) => {
-    const data = await getLatLong(id);
+  // const addLocation = async (id: string) => {
+  //   const data = await getLatLong(id);
+  //   if (!data) return;
+
+  //   if (focusedInput === "drop") {
+  //     setDrop(data.address);
+  //     setDropCoords(data);
+  //   } else {
+  //     setPickup(data.address);
+  //     setLocation(data);
+  //     setPickupCoords(data);
+  //   }
+  //   setLocations([]);
+  // };
+
+  const addLocation = async (place_id: string) => {
+    const place = locations.find((loc) => loc.place_id === place_id);
+    if (!place) {
+      console.warn("Selected place not found in locations");
+      return;
+    }
+
+    const data = await getLatLong(place.osm_id, place.osm_type);
     if (!data) return;
 
     if (focusedInput === "drop") {
@@ -210,9 +241,10 @@ const LocationSelection = () => {
       setDropCoords(data);
     } else {
       setPickup(data.address);
-      setLocation(data);
       setPickupCoords(data);
+      setLocation(data);
     }
+
     setLocations([]);
   };
 

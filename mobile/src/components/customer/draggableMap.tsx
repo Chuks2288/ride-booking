@@ -3,7 +3,12 @@ import React, { FC, memo, useEffect, useRef, useState } from "react";
 import { useIsFocused } from "@react-navigation/native";
 import { useUserStore } from "@/store/userStore";
 import { useWS } from "@/service/WSProvider";
-import MapView, { Marker, Region, UrlTile } from "react-native-maps";
+import MapView, {
+  Marker,
+  PROVIDER_DEFAULT,
+  Region,
+  UrlTile,
+} from "react-native-maps";
 import { customMapStyle, indiaIntialRegion } from "@/utils/CustomMap";
 import { reverseGeocode } from "@/utils/mapUtils";
 import haversine from "haversine-distance";
@@ -154,6 +159,7 @@ const DraggableMap: FC<{ height: number }> = ({ height }) => {
         style={{ flex: 1 }}
         initialRegion={indiaIntialRegion}
         // provider="google"
+        provider={PROVIDER_DEFAULT}
         showsMyLocationButton={false}
         showsCompass={false}
         showsIndoors={false}
@@ -165,6 +171,11 @@ const DraggableMap: FC<{ height: number }> = ({ height }) => {
         customMapStyle={customMapStyle}
         showsUserLocation={true}
       >
+        <UrlTile
+          urlTemplate="https://a.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png"
+          maximumZ={19}
+          flipY={false}
+        />
         {markers
           ?.filter(
             (marker: any) =>

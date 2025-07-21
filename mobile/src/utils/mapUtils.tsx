@@ -75,91 +75,6 @@
 //     }
 // };
 
-// import axios from "axios";
-// import { useUserStore } from "@/store/userStore";
-
-// const MAPBOX_BASE_URL = "https://api.mapbox.com/geocoding/v5/mapbox.places";
-
-// export const getLatLong = async (placeId: string) => {
-//   try {
-//     const response = await axios.get(
-//       `${MAPBOX_BASE_URL}/${encodeURIComponent(placeId)}.json`,
-//       {
-//         params: {
-//           access_token: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
-//           limit: 1,
-//         },
-//       }
-//     );
-
-//     const feature = response.data.features?.[0];
-//     if (feature) {
-//       return {
-//         latitude: feature.center[1],
-//         longitude: feature.center[0],
-//         address: feature.place_name,
-//       };
-//     } else {
-//       throw new Error("No location found for that place name");
-//     }
-//   } catch (error) {
-//     throw new Error("Unable to fetch location details");
-//   }
-// };
-
-// export const reverseGeocode = async (latitude: number, longitude: number) => {
-//   try {
-//     const response = await axios.get(
-//       `${MAPBOX_BASE_URL}/${longitude},${latitude}.json`,
-//       {
-//         params: {
-//           access_token: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
-//           limit: 1,
-//         },
-//       }
-//     );
-
-//     const feature = response.data.features?.[0];
-//     return feature?.place_name || "";
-//   } catch (error) {
-//     console.log("Error during reverse geocoding: ", error);
-//     return "";
-//   }
-// };
-
-// function extractPlaceData(features: any[]) {
-//   return features.map((item: any) => ({
-//     place_id: item.id,
-//     title: item.text,
-//     description: item.place_name,
-//   }));
-// }
-
-// export const getPlacesSuggestions = async (query: string) => {
-//   const { location } = useUserStore.getState();
-//   try {
-//     const response = await axios.get(
-//       `${MAPBOX_BASE_URL}/${encodeURIComponent(query)}.json`,
-//       {
-//         params: {
-//           access_token: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
-//           proximity: location
-//             ? `${location.longitude},${location.latitude}`
-//             : undefined,
-//           autocomplete: true,
-//           limit: 5,
-//           country: "IN",
-//         },
-//       }
-//     );
-
-//     return extractPlaceData(response.data.features);
-//   } catch (error) {
-//     console.error("Error fetching autocomplete suggestions:", error);
-//     return [];
-//   }
-// };
-
 export const calculateDistance = (
   lat1: number,
   lon1: number,
@@ -292,16 +207,53 @@ import haversine from "haversine-distance";
 const appName = Constants.manifest?.name || "rideapp";
 const userAgent = `${appName}/1.0 (chuksdumbiri87@gmail.com)`;
 
-export const getLatLong = async (placeId: string) => {
+// export const getLatLong = async (placeId: string) => {
+//   try {
+//     const response = await axios.get(
+//       "https://nominatim.openstreetmap.org/search",
+//       {
+//         params: {
+//           q: placeId,
+//           format: "json",
+//           addressdetails: 1,
+//           limit: 1,
+//         },
+//         headers: {
+//           "User-Agent": userAgent,
+//         },
+//       }
+//     );
+
+//     const data = response.data;
+
+//     if (data.length > 0) {
+//       const location = data[0];
+//       const address = location.display_name;
+
+//       return {
+//         latitude: parseFloat(location.lat),
+//         longitude: parseFloat(location.lon),
+//         address: address,
+//       };
+//     } else {
+//       throw new Error("Unable to fetch location details");
+//     }
+//   } catch (error) {
+//     throw new Error("Unable to fetch location details");
+//   }
+// };
+
+export const getLatLong = async (osm_id: number, osm_type: string) => {
   try {
+    const osmTypeLetter = osm_type.toUpperCase(); // N, W, or R
+
     const response = await axios.get(
-      "https://nominatim.openstreetmap.org/search",
+      "https://nominatim.openstreetmap.org/lookup",
       {
         params: {
-          q: placeId,
+          osm_ids: `${osmTypeLetter}${osm_id}`,
           format: "json",
           addressdetails: 1,
-          limit: 1,
         },
         headers: {
           "User-Agent": userAgent,
@@ -313,17 +265,16 @@ export const getLatLong = async (placeId: string) => {
 
     if (data.length > 0) {
       const location = data[0];
-      const address = location.display_name;
-
       return {
         latitude: parseFloat(location.lat),
         longitude: parseFloat(location.lon),
-        address: address,
+        address: location.display_name,
       };
     } else {
       throw new Error("Unable to fetch location details");
     }
   } catch (error) {
+    console.error(error);
     throw new Error("Unable to fetch location details");
   }
 };
@@ -359,21 +310,26 @@ export const reverseGeocode = async (latitude: number, longitude: number) => {
 // function extractPlaceData(data: any) {
 //   return data.map((item: any) => {
 //     const props = item.properties;
+
 //     const descriptionParts = [
+//       props.housenumber,
 //       props.street,
+//       props.suburb,
 //       props.city,
 //       props.state,
+//       props.postcode,
 //       props.country,
-//     ].filter(Boolean);
+//     ].filter(Boolean); // Remove any undefined or null values
 
 //     return {
 //       place_id: props.osm_id.toString(),
-//       title: props.name || props.street || "Unknown",
+//       title: props.name || props.street || "Unnamed Place",
 //       description: descriptionParts.join(", "),
 //       geometry: item.geometry,
 //     };
 //   });
 // }
+
 function extractPlaceData(data: any) {
   return data.map((item: any) => {
     const props = item.properties;
@@ -386,10 +342,12 @@ function extractPlaceData(data: any) {
       props.state,
       props.postcode,
       props.country,
-    ].filter(Boolean); // Remove any undefined or null values
+    ].filter(Boolean);
 
     return {
-      place_id: props.osm_id.toString(),
+      place_id: props.osm_id.toString(), // keep this as UI key
+      osm_id: props.osm_id, // needed for lookup
+      osm_type: props.osm_type, // needed for lookup
       title: props.name || props.street || "Unnamed Place",
       description: descriptionParts.join(", "),
       geometry: item.geometry,

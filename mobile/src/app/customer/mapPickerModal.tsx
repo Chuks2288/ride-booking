@@ -6,6 +6,7 @@ import {
   TextInput,
   FlatList,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import React, { FC, memo, useEffect, useRef, useState } from "react";
 import { modalStyles } from "@/styles/modalStyles";
@@ -37,6 +38,15 @@ interface MapPickerModalProps {
   onSelectLocation: (location: any) => void;
 }
 
+interface LocationItemType {
+  place_id: string;
+  osm_id: number;
+  osm_type: string;
+  title: string;
+  description: string;
+  geometry: any;
+}
+
 const MapPickerModal: FC<MapPickerModalProps> = ({
   visible,
   onClose,
@@ -51,13 +61,22 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
   const [text, setText] = useState("");
   const [address, setAddress] = useState("");
   const [region, setRegion] = useState<Region | null>(null);
-  const [locations, setLocations] = useState([]);
+  //   const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState<LocationItemType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const fetchLocation = async (query: string) => {
     if (query?.length > 4) {
+      setLoading(false);
+      setHasSearched(false);
       const data = await getPlacesSuggestions(query);
       setLocations(data);
+      setLoading(false);
+      setHasSearched(true);
     } else {
+      setLoading(false);
+      setHasSearched(false);
       setLocations([]);
     }
   };
@@ -87,8 +106,28 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
     }
   }, [selectedLocation, mapRef]);
 
+  //   const addLocation = async (place_id: string) => {
+  //     const data = await getLatLong(place_id);
+  //     if (data) {
+  //       setRegion({
+  //         latitude: data.latitude,
+  //         longitude: data.longitude,
+  //         latitudeDelta: 0.5,
+  //         longitudeDelta: 0.5,
+  //       });
+  //       setAddress(data.address);
+  //     }
+  //     textInputRef.current?.blur();
+  //     setText("");
+  //   };
+
   const addLocation = async (place_id: string) => {
-    const data = await getLatLong(place_id);
+    const place = locations.find((loc) => loc.place_id === place_id);
+    if (!place) {
+      console.warn("Place not found for place_id:", place_id);
+      return;
+    }
+    const data = await getLatLong(place.osm_id, place.osm_type);
     if (data) {
       setRegion({
         latitude: data.latitude,
@@ -163,7 +202,7 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
             value={text}
             onChangeText={(e) => {
               setText(e);
-              fetchLocation;
+              fetchLocation(e);
             }}
           />
         </View>
@@ -184,6 +223,17 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
             keyExtractor={(item: any) => item.place_id}
             initialNumToRender={5}
             windowSize={5}
+            ListFooterComponent={
+              loading ? (
+                <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                  <ActivityIndicator size="small" color="#3C75BE" />
+                </View>
+              ) : hasSearched && locations.length === 0 ? (
+                <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                  <Text style={{ color: "#888" }}>No results found</Text>
+                </View>
+              ) : null
+            }
           />
         ) : (
           <>
@@ -207,7 +257,7 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
                   latitudeDelta: 0.5,
                   longitudeDelta: 0.5,
                 }}
-                provider="google"
+                // provider="google"
                 showsMyLocationButton={false}
                 showsCompass={false}
                 showsIndoors={false}
@@ -253,6 +303,7 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
                       longitude: region?.longitude,
                       address: address,
                     });
+                    // onClose();
                   }}
                 >
                   <Text style={modalStyles.buttonText}>Set Address</Text>
