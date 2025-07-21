@@ -303,7 +303,7 @@ const MapPickerModal: FC<MapPickerModalProps> = ({
                       longitude: region?.longitude,
                       address: address,
                     });
-                    // onClose();
+                    onClose();
                   }}
                 >
                   <Text style={modalStyles.buttonText}>Set Address</Text>
