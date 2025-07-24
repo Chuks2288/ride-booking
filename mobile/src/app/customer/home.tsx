@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { View, Text, StatusBar, Platform } from "react-native";
 
 import { homeStyles } from "@/styles/homeStyles";
@@ -8,6 +14,7 @@ import { screenHeight } from "@/utils/Constants";
 
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import SheetContent from "@/components/customer/sheetContent";
+import { getMyRides } from "@/service/rideService";
 
 const androidHeights = [
   screenHeight * 0.12,
@@ -29,10 +36,13 @@ const CustomerHome: React.FC = () => {
   const handleSheetChanges = useCallback((index: number) => {
     let height = screenHeight * 0.8;
     if (index === 1) {
-      // height = Platform.OS === "ios" ? screenHeight * 0.57 : screenHeight * 0.5;
       height = screenHeight * 0.5;
     }
     setMapHeight(height);
+  }, []);
+
+  useEffect(() => {
+    getMyRides();
   }, []);
 
   return (

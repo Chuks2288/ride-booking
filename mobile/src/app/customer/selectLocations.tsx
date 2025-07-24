@@ -159,9 +159,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 // import { debounce } from "lodash";
 
 import CustomText from "@/components/shared/customText";
-import LocationInput from "./locationInput";
-import LocationItem from "./locationItem";
-import MapPickerModal from "./mapPickerModal";
+import LocationInput from "../../components/customer/locationInput";
+import LocationItem from "../../components/customer/locationItem";
+import MapPickerModal from "../../components/customer/mapPickerModal";
 
 import {
   getPlacesSuggestions,
@@ -273,7 +273,7 @@ const LocationSelection = () => {
 
     const minDistance = 0.5; // Minimum distance in km (e.g., 500meters)
     // const maxDistance = 0.5; // Minimum distance in km (e.g., 50 km)
-    const maxDistance = 5; // Minimum distance in km (e.g., 50 km)
+    const maxDistance = 50; // Minimum distance in km (e.g., 50000 km)
 
     if (distance < minDistance) {
       alert(
