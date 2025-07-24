@@ -1,7 +1,13 @@
-import { View, Text } from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import React, { FC, memo, useEffect, useRef, useState } from "react";
-import MapView from "react-native-maps";
-import { indiaIntialRegion } from "@/utils/CustomMap";
+import MapView, { Marker, Polyline } from "react-native-maps";
+import { customMapStyle, indiaIntialRegion } from "@/utils/CustomMap";
+import MapViewDirections from "react-native-maps-directions";
+import { Colors } from "@/utils/Constants";
+import { getPoints } from "@/utils/mapUtils";
+import { mapStyles } from "@/styles/mapStyles";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { RFValue } from "react-native-responsive-fontsize";
 
 const apikey = process.env.EXPO_PUBLIC_MAP_API_KEY || "";
 
@@ -73,8 +79,97 @@ const LiveTrackingMap: FC<{
   }, [drop?.latitude, pickup?.latitude, rider.latitude]);
 
   return (
-    <View>
-      <Text>LiveTrackingMap</Text>
+    <View style={{ height: height, width: "100%" }}>
+      <MapView
+        ref={mapRef}
+        followsUserLocation
+        style={{ flex: 1 }}
+        initialRegion={calculateInitialRegion()}
+        provider="google"
+        showsMyLocationButton={false}
+        showsCompass={false}
+        showsIndoors={false}
+        customMapStyle={customMapStyle}
+        showsUserLocation={true}
+        onRegionChange={() => setIsUserInteracting(true)}
+        onRegionChangeComplete={() => setIsUserInteracting(false)}
+      >
+        {rider?.latitude & pickup?.latitude && (
+          <MapViewDirections
+            origin={rider}
+            destination={status === "START" ? pickup : drop}
+            onReady={fitToMarkers}
+            apikey={apikey}
+            strokeColor={Colors.iosColor}
+            strokeColors={[Colors.iosColor]}
+            strokeWidth={5}
+            precision="high"
+            onError={(error) => console.log("Directions error", error)}
+          />
+        )}
+        {drop?.latitude && (
+          <Marker
+            coordinate={{ latitude: drop.latitude, longitude: drop.longitude }}
+            anchor={{ x: 0.5, y: 1 }}
+            zIndex={1}
+          >
+            <Image
+              source={require("@/assets/icons/drop_marker.png")}
+              style={{ height: 30, width: 30, resizeMode: "contain" }}
+            />
+          </Marker>
+        )}
+
+        {pickup?.latitude && (
+          <Marker
+            coordinate={{
+              latitude: pickup.latitude,
+              longitude: pickup.longitude,
+            }}
+            anchor={{ x: 0.5, y: 1 }}
+            zIndex={2}
+          >
+            <Image
+              source={require("@/assets/icons/marker.png")}
+              style={{ height: 30, width: 30, resizeMode: "contain" }}
+            />
+          </Marker>
+        )}
+
+        {rider?.latitude && (
+          <Marker
+            coordinate={{
+              latitude: rider.latitude,
+              longitude: rider.longitude,
+            }}
+            anchor={{ x: 0.5, y: 1 }}
+            zIndex={3}
+          >
+            <Image
+              source={require("@/assets/icons/cab_marker.png")}
+              style={{ height: 40, width: 40, resizeMode: "contain" }}
+            />
+          </Marker>
+        )}
+
+        {drop && pickup && (
+          <Polyline
+            coordinates={getPoints([drop, pickup])}
+            strokeColor={Colors.text}
+            strokeWidth={2}
+            geodesic={true}
+            lineDashPattern={[12, 10]}
+          />
+        )}
+      </MapView>
+
+      <TouchableOpacity style={mapStyles.gpsButton} onPress={fitToMarkers}>
+        <MaterialCommunityIcons
+          name="crosshairs-gps"
+          size={RFValue(16)}
+          color="#3C75BE"
+        />
+      </TouchableOpacity>
     </View>
   );
 };
